@@ -58,7 +58,7 @@ export default class playScene extends Phaser.Scene
             this.add.image(450,430,'map2').setScale(2.35)
         }
         //游戏小提示
-        this.add.text(40,1050,'Tips: 撞到怪物后,怪物会反弹一秒,注意躲避!',{fontSize: '30px'})
+        this.add.text(40,1050,'Tips: 你握着剑,但却无法挥舞(我还没做),所以,快逃吧！',{fontSize: '30px'})
         //墙
         wallGroups = this.physics.add.staticGroup();
         //墙组
@@ -172,6 +172,21 @@ export default class playScene extends Phaser.Scene
             // 根据方向向量和速度更新怪物的位置
             hunter.x += direction.x * speed * delta;
             hunter.y += direction.y * speed * delta;
+            hunters.getChildren().forEach(function (hunter2) {
+                var b = Phaser.Geom.Intersects.RectangleToRectangle(hunter.getBounds(),hunter2.getBounds());
+                if (hunter2 !== hunter && b) {
+                    if (hunter.x > hunter2.x) {
+                        hunter.x = hunter.x + 0.4;
+                    } else  {
+                        hunter.x = hunter.x - 0.4;
+                    }
+                    if (hunter.y > hunter2.y) {
+                        hunter.y = hunter.y + 0.4;
+                    } else  {
+                        hunter.y = hunter.y - 0.4;
+                    }
+                }
+            })
         })
         //精英怪物追逐行为
         eliteHunters.getChildren().forEach(function (eliteHunter) {
