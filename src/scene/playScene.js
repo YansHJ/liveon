@@ -203,43 +203,44 @@ export default class playScene extends Phaser.Scene
     }
 
     createHunter(){
-        //随机概率使得从四个方向随机位置刷怪
-        var probability = Phaser.Math.Between(0,3);
-        console.log(probability)
-        var x = 0;
-        var y = 0
-        if (probability === 0) {
-            x = Phaser.Math.Between(0, 900)
-            y = 20;
-        } else if (probability === 1){
-            x = Phaser.Math.Between(0, 900)
-            y = 1000;
-        } else if (probability === 2){
-            y = Phaser.Math.Between(0, 1000)
-            x = 20;
-        } else if (probability === 3){
-            y = Phaser.Math.Between(0, 1000)
-            x = 900;
+        if (hunters.getLength() <= 100) {
+            //随机概率使得从四个方向随机位置刷怪
+            var probability = Phaser.Math.Between(0,3);
+            var x = 0;
+            var y = 0
+            if (probability === 0) {
+                x = Phaser.Math.Between(0, 900)
+                y = 20;
+            } else if (probability === 1){
+                x = Phaser.Math.Between(0, 900)
+                y = 1000;
+            } else if (probability === 2){
+                y = Phaser.Math.Between(0, 1000)
+                x = 20;
+            } else if (probability === 3){
+                y = Phaser.Math.Between(0, 1000)
+                x = 900;
+            }
+            //初始化怪物
+            var hunter;
+            //隔20秒生成一个精英怪
+            if ((liveTime >= 21 && liveTime <= 25) ||
+                (liveTime >= 42 && liveTime <= 46) ||
+                (liveTime >= 63 && liveTime <= 67) ||
+                (liveTime >= 84 && liveTime <= 88) ||
+                (liveTime >= 105 && liveTime <= 109)){
+                hunter = eliteHunters.create(x,y, 'eliteHunter').setScale(0.2);
+            } else {
+                hunter = hunters.create(x,y, 'hunter').setScale(0.06);
+            }
+            //怪物反弹量
+            hunter.setBounce(0.2)
+            //怪物边界碰撞
+            hunter.setCollideWorldBounds(true);
+            // hunter.setVelocity(Phaser.Math.Between(-200, 200), 30);
+            //怪物重力关
+            hunter.allowGravity = false;
         }
-        //初始化怪物
-        var hunter;
-        //隔20秒生成一个精英怪
-        if ((liveTime >= 21 && liveTime <= 25) ||
-            (liveTime >= 42 && liveTime <= 46) ||
-            (liveTime >= 63 && liveTime <= 67) ||
-            (liveTime >= 84 && liveTime <= 88) ||
-            (liveTime >= 105 && liveTime <= 109)){
-            hunter = eliteHunters.create(x,y, 'eliteHunter').setScale(0.2);
-        } else {
-            hunter = hunters.create(x,y, 'hunter').setScale(0.06);
-        }
-        //怪物反弹量
-        hunter.setBounce(0.2)
-        //怪物边界碰撞
-        hunter.setCollideWorldBounds(true);
-        // hunter.setVelocity(Phaser.Math.Between(-200, 200), 30);
-        //怪物重力关
-        hunter.allowGravity = false;
     }
 
     liveTime() {
@@ -269,9 +270,16 @@ export default class playScene extends Phaser.Scene
             var endText = this.add.text(320, 600,'生存时间： ' + liveTime + ' !!',{fontSize: '32px', fill: '#000'});
             endText.setColor('#ff1d1d')
             liveTime = 0;
+            var restart = this.add.text(320, 800,'重新开始',{fontSize: '64px'})
+                .setInteractive()
+                .on('pointerdown',() => {
+                    hp = 5
+                    this.scene.restart()
+                })
         } else {
             //停活被碰撞怪物
-            hunter.disableBody(true,true)
+            hunters.remove(hunter,true)
+            eliteHunters.remove(hunter,true)
             hp = hp - 1;
             hpText.setText('生命: ' + hp)
             //设置血量显示颜色
@@ -285,7 +293,8 @@ export default class playScene extends Phaser.Scene
 
     healthUp(player,health) {
         //停活被碰撞道具
-        health.disableBody(true,true)
+        // health.disableBody(true,true)
+        healthProps.remove(health,true)
         hp = hp + 3;
         hpText.setText('生命: ' + hp)
         //设置血量显示颜色

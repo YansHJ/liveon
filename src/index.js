@@ -1,8 +1,6 @@
 import Phaser from 'phaser';
-import playScene from './scene/playScene.js'
 import indexScene from './scene/indexScene.js'
 import VirtualJoyStickPlugin from 'phaser3-rex-plugins/plugins/virtualjoystick-plugin.js'
-import BoardPlugin from "phaser3-rex-plugins/plugins/board-plugin";
 class MyGame extends Phaser.Scene
 {
     constructor ()
@@ -11,13 +9,13 @@ class MyGame extends Phaser.Scene
     }
     preload ()
     {
-        this.scene.add('playScene', playScene,false)
+        this.scene.add('indexScene', indexScene,false)
     }
     create ()
     {
 
         console.log('MyGame')
-        this.scene.start('playScene')
+        this.scene.start('indexScene')
     }
     update(time, delta) {
 
