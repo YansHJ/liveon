@@ -27,7 +27,7 @@ export default class indexScene extends Phaser.Scene
         var authorName = this.add.text(720,20,'Author:Yans', { fontFamily: 'Arial', fontSize: '32px'})
         //开始按钮动画
         this.anims.create({
-            key: 'down',
+            key: 'startAnims',
             frames: this.anims.generateFrameNumbers('start',{start: 0,end: 3}),
             frameRate: 20,
             repeat: -1
@@ -39,7 +39,7 @@ export default class indexScene extends Phaser.Scene
             .on('pointerdown',() => {
                 this.startGames()
             })
-        startButton.anims.play('down',true)
+        startButton.anims.play('startAnims',true)
         //文本
         var inputText = this.add.text(450,1000,'点击这里输入你的昵称,加入排行榜', { fontFamily: 'Arial', fontSize: '38px'})
             .setOrigin(0.5)

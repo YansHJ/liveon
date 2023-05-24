@@ -25,7 +25,7 @@ var hunterTimer;
 var liveTimer;
 var hunterSpeed = 0.06;
 var arms;
-var container;
+var baseDamage = 1;
 export default class playScene extends Phaser.Scene
 {
     constructor ()
@@ -37,43 +37,47 @@ export default class playScene extends Phaser.Scene
         console.log('PlayScene')
         this.load.image('logo', logoImg);
         this.load.image('sky',sky);
-        this.load.image('yans',yans);
-        // this.load.spritesheet('yans','./assets/yans.png', {frameWidth: 32, frameHeight: 32})
+        // this.load.image('yans',yans);
+        this.load.spritesheet('yans',yans, {frameWidth: 48, frameHeight: 48})
         this.load.image('wall',wall);
-        this.load.image('hunter',hunter);
+        // this.load.image('hunter',hunter);
+        this.load.spritesheet('hunter', hunter, { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('eliteHunter', eliteHunter, { frameWidth: 64, frameHeight: 64 });
         this.load.image('ji',ji);
         this.load.image('map1',map1);
         this.load.image('map2',map2);
-        this.load.image('eliteHunter',eliteHunter);
         this.load.image('health',health);
         this.load.image('dagger',dagger);
     }
 
     create ()
     {
+        //随机选取地图
         var mapProbability =  Phaser.Math.Between(0,1)
         if (mapProbability === 0) {
             this.add.image(450,400,'map1').setScale(1.05)
         } else if (mapProbability === 1) {
             this.add.image(450,430,'map2').setScale(2.35)
         }
-        //游戏小提示
-        this.add.text(40,1050,'Tips: 你握着剑,但却无法挥舞(我还没做),所以,快逃吧！',{fontSize: '30px'})
+        //游戏小提示文本
+        this.add.text(40,1050,'Tips: 当前仍处于早期开发阶段,如有好的建议和想法欢迎提出',{fontSize: '30px'})
         //墙
         wallGroups = this.physics.add.staticGroup();
         //墙组
         wallGroups.create(400,1020,'wall').setScale(1.2)
         //玩家
-        player = this.physics.add.sprite(450,450,'yans').setScale(0.05,0.05)
+        player = this.physics.add.sprite(450,450,'yans').setScale(1.7,1.7)
         player.setBounce(0.1)
         player.setCollideWorldBounds(true)
         //剑
-        arms = this.physics.add.sprite(player.x + 60,player.y,'dagger').setScale(0.3,0.3);
-
+        // arms = this.physics.add.sprite(player.x + 60,player.y,'dagger').setScale(0.3,0.3);
         //怪物
         hunters = this.physics.add.group()
         eliteHunters = this.physics.add.group()
+        //加血道具
         healthProps = this.physics.add.group()
+        //创建动画
+        this.createAnim()
         //添加下墙碰撞
         this.physics.add.collider(player,wallGroups)
         //生成怪物的计时器
@@ -129,38 +133,39 @@ export default class playScene extends Phaser.Scene
             var angle = joystick.angle;
             //力度
             var force = joystick.force;
-            //锁定初速度为200，去除加速的过程
+            //锁定初速度为200，去除加速度的过程
             if (force !== 0) {
                 force = 200;
             }
-            //弧度
+            //转化为弧度
             var radian = Phaser.Math.DegToRad(angle);
-            //三角
+            // console.log('弧度：' + radian)
+            //根据不同的摇杆方向加载不同的人物动画
+            if (radian >= -2.5 && radian <= -0.5) {
+                player.anims.play('playerUp')
+            } else if (radian > -0.5 && radian <= 0.5 && radian !== 0) {
+                player.anims.play('playerRight')
+            } else if (radian >= 2.5 || radian < -2.5) {
+                player.anims.play('playerLeft')
+            } else {
+                player.anims.play('playerDown')
+            }
+            //三角函数
             var forceX = Math.cos(radian) * force;
             var forceY = Math.sin(radian) * force;
             //方向加速度
             player.setVelocityX(forceX * speed);
             player.setVelocityY(forceY * speed);
-
-            // var speed = 1; // 设置角色的移动速度
-            //
-            // // 获取虚拟摇杆的角度（或弧度）
-            // var angle = joystick.angle;
-            // console.log(angle)
-            //
-            // // 根据角度计算角色在 x 和 y 轴上的移动分量
-            // var moveX = Math.cos(Phaser.Math.DegToRad(angle));
-            // var moveY = Math.sin(Phaser.Math.DegToRad(angle));
-            //
-            // // 根据移动分量和速度更新角色的位置
-            // player.x += moveX * speed;
-            // player.y += moveY * speed;
-            // console.log('moveX : ' + moveX )
-            // console.log('moveY : ' + moveY )
         });
 
 
     }
+
+    /**
+     * 更新
+     * @param time
+     * @param delta
+     */
     update(time, delta) {
         super.update(time, delta);
         //普通怪物追逐行为
@@ -172,18 +177,19 @@ export default class playScene extends Phaser.Scene
             // 根据方向向量和速度更新怪物的位置
             hunter.x += direction.x * speed * delta;
             hunter.y += direction.y * speed * delta;
+            //防止重叠算法
             hunters.getChildren().forEach(function (hunter2) {
                 var b = Phaser.Geom.Intersects.RectangleToRectangle(hunter.getBounds(),hunter2.getBounds());
                 if (hunter2 !== hunter && b) {
                     if (hunter.x > hunter2.x) {
-                        hunter.x = hunter.x + 0.4;
+                        hunter.x = hunter.x + 0.1;
                     } else  {
-                        hunter.x = hunter.x - 0.4;
+                        hunter.x = hunter.x - 0.1;
                     }
                     if (hunter.y > hunter2.y) {
-                        hunter.y = hunter.y + 0.4;
+                        hunter.y = hunter.y + 0.1;
                     } else  {
-                        hunter.y = hunter.y - 0.4;
+                        hunter.y = hunter.y - 0.1;
                     }
                 }
             })
@@ -193,16 +199,20 @@ export default class playScene extends Phaser.Scene
             // 计算怪物与角色之间的方向向量
             var direction = new Phaser.Math.Vector2(player.x - eliteHunter.x, player.y - eliteHunter.y);
             direction.normalize(); // 归一化向量，使其长度为 1
-            var speed = 0.10; // 设置怪物的移动速度
+            var speed = 0.15; // 设置怪物的移动速度
             // 根据方向向量和速度更新怪物的位置
             eliteHunter.x += direction.x * speed * delta;
             eliteHunter.y += direction.y * speed * delta;
         })
-        arms.x = player.x + 50;
-        arms.y = player.y;
+        // arms.x = player.x + 50;
+        // arms.y = player.y;
     }
 
+    /**
+     * 随时间推移生成怪物
+     */
     createHunter(){
+        //限定最大怪物数量100
         if (hunters.getLength() <= 100) {
             //随机概率使得从四个方向随机位置刷怪
             var probability = Phaser.Math.Between(0,3);
@@ -229,12 +239,17 @@ export default class playScene extends Phaser.Scene
                 (liveTime >= 63 && liveTime <= 67) ||
                 (liveTime >= 84 && liveTime <= 88) ||
                 (liveTime >= 105 && liveTime <= 109)){
-                hunter = eliteHunters.create(x,y, 'eliteHunter').setScale(0.2);
+                hunter = eliteHunters.create(x,y, 'eliteHunter').setScale(1.7);
+                hunter.anims.play('eliteHunterAnims')
+                hunter.setSize(15,29)
             } else {
-                hunter = hunters.create(x,y, 'hunter').setScale(0.06);
+                hunter = hunters.create(x,y, 'hunter').setScale(1.7);
+                hunter.anims.play('hunterAnims')
+                hunter.setSize(15,29)
+
             }
             //怪物反弹量
-            hunter.setBounce(0.2)
+            // hunter.setBounce(0.2)
             //怪物边界碰撞
             hunter.setCollideWorldBounds(true);
             // hunter.setVelocity(Phaser.Math.Between(-200, 200), 30);
@@ -243,6 +258,9 @@ export default class playScene extends Phaser.Scene
         }
     }
 
+    /**
+     * 生存时间
+     */
     liveTime() {
         //生存时间
         liveTime += 1;
@@ -255,6 +273,11 @@ export default class playScene extends Phaser.Scene
         }
     }
 
+    /**
+     * 碰到怪物扣血，或者死亡逻辑判定
+     * @param player
+     * @param hunter
+     */
     playerDead(player,hunter) {
         if (hp <= 1) {
             //人物死亡暂停游戏
@@ -278,9 +301,10 @@ export default class playScene extends Phaser.Scene
                 })
         } else {
             //停活被碰撞怪物
+            hunter.disableBody(true,true)
             hunters.remove(hunter,true)
             eliteHunters.remove(hunter,true)
-            hp = hp - 1;
+            hp = hp - baseDamage;
             hpText.setText('生命: ' + hp)
             //设置血量显示颜色
             hpText.setColor('#ff0000');
@@ -291,6 +315,11 @@ export default class playScene extends Phaser.Scene
         }
     }
 
+    /**
+     * 加血道具判定
+     * @param player
+     * @param health
+     */
     healthUp(player,health) {
         //停活被碰撞道具
         // health.disableBody(true,true)
@@ -305,11 +334,59 @@ export default class playScene extends Phaser.Scene
         })
     }
 
+    /**
+     * 随机生成加血道具
+     */
     createHealthProp() {
         var x = Phaser.Math.Between(20,880);
         var y = Phaser.Math.Between(20,980);
         var healths = healthProps.create(x,y, 'health').setScale(0.2);
         healths.setBounce(0);
+    }
+
+    /**
+     * 创建动画
+     */
+    createAnim() {
+        //人物动画
+        this.anims.create({
+            key: 'playerDown',
+            frames: this.anims.generateFrameNumbers('yans',{start: 0,end: 2}),
+            frameRate: 30,
+            repeat: 0
+        })
+        this.anims.create({
+            key: 'playerLeft',
+            frames: this.anims.generateFrameNumbers('yans',{start: 3,end: 5}),
+            frameRate: 30,
+            repeat: -1
+        })
+        this.anims.create({
+            key: 'playerRight',
+            frames: this.anims.generateFrameNumbers('yans',{start: 6,end: 8}),
+            frameRate: 30,
+            repeat: -1
+        })
+        this.anims.create({
+            key: 'playerUp',
+            frames: this.anims.generateFrameNumbers('yans',{start: 9,end: 11}),
+            frameRate: 30,
+            repeat: -1
+        })
+        //怪物动画
+        this.anims.create({
+            key: 'hunterAnims',
+            frames: this.anims.generateFrameNumbers('hunter',{start: 0,end: 4}),
+            frameRate: 16,
+            repeat: -1
+        })
+        //精英怪物动画
+        this.anims.create({
+            key: 'eliteHunterAnims',
+            frames: this.anims.generateFrameNumbers('eliteHunter',{start: 0,end: 3}),
+            frameRate: 16,
+            repeat: -1
+        })
     }
 
 }
