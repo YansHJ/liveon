@@ -11,6 +11,7 @@ import map2 from '../assets/map2.png';
 import health from '../assets/health.png';
 import eliteHunter from '../assets/eliteHunter.png';
 import dagger from '../assets/dagger.png';
+import hack from '../assets/hack.png';
 var player;
 var joystick;
 var hunters;
@@ -26,11 +27,22 @@ var liveTimer;
 var hunterSpeed = 0.06;
 var arms;
 var baseDamage = 1;
+var talent = 0;
+var baseHealthNum = 3;
+var updateTalentFlag = false;
 export default class playScene extends Phaser.Scene
 {
     constructor ()
     {
         super();
+    }
+    init() {
+        liveTime = 0;
+        hp = 5;
+        hunterSpeed = 0.06;
+        baseDamage = 1;
+        talent = 0;
+        baseHealthNum = 3;
     }
     preload ()
     {
@@ -43,6 +55,7 @@ export default class playScene extends Phaser.Scene
         // this.load.image('hunter',hunter);
         this.load.spritesheet('hunter', hunter, { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('eliteHunter', eliteHunter, { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('hack', hack, { frameWidth: 64, frameHeight: 64 });
         this.load.image('ji',ji);
         this.load.image('map1',map1);
         this.load.image('map2',map2);
@@ -69,8 +82,6 @@ export default class playScene extends Phaser.Scene
         player = this.physics.add.sprite(450,450,'yans').setScale(1.7,1.7)
         player.setBounce(0.1)
         player.setCollideWorldBounds(true)
-        //剑
-        // arms = this.physics.add.sprite(player.x + 60,player.y,'dagger').setScale(0.3,0.3);
         //怪物
         hunters = this.physics.add.group()
         eliteHunters = this.physics.add.group()
@@ -81,10 +92,12 @@ export default class playScene extends Phaser.Scene
         //添加下墙碰撞
         this.physics.add.collider(player,wallGroups)
         //生成怪物的计时器
-        hunterTimer = this.time.addEvent({
-            delay: 3000,
-            callback: this.createHunter,
-            loop: true
+        this.time.delayedCall(5000, () => {
+            hunterTimer = this.time.addEvent({
+                delay: 3000,
+                callback: this.createHunter,
+                loop: true
+            })
         })
         //怪物与墙的碰撞，怪物与怪物的碰撞
         this.physics.add.collider(hunters,wallGroups)
@@ -101,7 +114,7 @@ export default class playScene extends Phaser.Scene
         liveTimeText = this.add.text(40,900,'生存时间: 0',{fontSize: '32px', fill: '#000'})
         liveTimeText.setColor('#FF9900')
         //血量文本
-        hpText = this.add.text(40,110,'生命: ' + hp,{fontSize: '36px', fill: '#000'})
+        hpText = this.add.text(40,80,'生命: ' + hp,{fontSize: '36px', fill: '#000'})
         hpText.setColor('#62ff62')
         //生成道具计时器
         liveTimer = this.time.addEvent({
@@ -157,8 +170,10 @@ export default class playScene extends Phaser.Scene
             player.setVelocityX(forceX * speed);
             player.setVelocityY(forceY * speed);
         });
-
-
+        //抽取天赋
+        talent = Phaser.Math.Between(0,3);
+        // talent = 3;
+        this.extractTalent()
     }
 
     /**
@@ -204,8 +219,10 @@ export default class playScene extends Phaser.Scene
             eliteHunter.x += direction.x * speed * delta;
             eliteHunter.y += direction.y * speed * delta;
         })
-        // arms.x = player.x + 50;
-        // arms.y = player.y;
+
+
+        //天赋数据更新事件
+        this.updateTalent()
     }
 
     /**
@@ -322,9 +339,9 @@ export default class playScene extends Phaser.Scene
      */
     healthUp(player,health) {
         //停活被碰撞道具
-        // health.disableBody(true,true)
+        health.disableBody(true,true)
         healthProps.remove(health,true)
-        hp = hp + 3;
+        hp = hp + baseHealthNum;
         hpText.setText('生命: ' + hp)
         //设置血量显示颜色
         hpText.setColor('#ffda2c');
@@ -387,6 +404,110 @@ export default class playScene extends Phaser.Scene
             frameRate: 16,
             repeat: -1
         })
+        //劈砍特效动画
+        this.anims.create({
+            key: 'hackAnims',
+            frames: this.anims.generateFrameNumbers('hack',{start: 0,end: 7}),
+            frameRate: 30,
+            repeat: 0
+        })
     }
 
+    /**
+     * 天赋抽取
+     * @constructor
+     */
+    extractTalent() {
+        var talentMsg;
+        switch (talent) {
+            case 0:
+                talentMsg = '天赋: 暴食者 \n\n(道具回血翻倍,怪物伤害翻倍)';
+                baseDamage = baseDamage * 2;
+                baseHealthNum = baseHealthNum * 2;
+                break;
+            case 1:
+                talentMsg = '天赋: 普通人 \n\n(普普通通的一个人)';
+                break;
+            case 2:
+                talentMsg = '天赋: 巨人 \n\n(体积会随着生命改变,但是受到的伤害减半)';
+                baseDamage = baseDamage / 2;
+                break;
+            case 3:
+                talentMsg = '天赋: 剑客 \n\n(获得一把神剑!但是神剑的性格难以琢磨)';
+                //剑
+                arms = this.physics.add.sprite(player.x + 60,player.y,'dagger').setScale(0.3,0.3);
+                //随机攻击一个怪物
+                this.armsAttack();
+
+        }
+        var talentText = this.add.text(450, 120,talentMsg,{fontSize: '64px'});
+        talentText.setAlign('center')
+        talentText.setOrigin(0.5,0.5)
+        this.time.delayedCall(2000, () => {
+            talentText.setFontSize('32px')
+        })
+    }
+
+    /**
+     * 天赋数据更新
+     * @constructor
+     */
+    updateTalent() {
+        switch (talent) {
+            case 2:
+                //体积会随着血量改变,但是收到的伤害减半
+                var hpDifference = hp - 5;
+                if (hpDifference !== 0) {
+                    //基础缩放
+                    var playerBaseScale = 1.7;
+                    var finalScale = playerBaseScale + (hpDifference * 0.2);
+                    player.setScale(finalScale,finalScale)
+                }
+                break;
+            case 3:
+                //获得一把神剑!但是神剑的性格难以琢磨
+                arms.x = player.x + 50;
+                arms.y = player.y;
+        }
+    }
+
+    /**
+     * 神剑攻击方法
+     */
+    armsAttack() {
+        this.time.delayedCall(7000, () => {
+            hunterTimer = this.time.addEvent({
+                delay: 3000,
+                callback: () => {
+                    var randomNum = Phaser.Math.Between(0,3);
+                    if (randomNum === 2 || randomNum === 3) {
+                        var randomHunter;
+                        if (randomNum === 2) {
+                            randomHunter = hunters.getChildren()[Phaser.Math.Between(0, hunters.getLength() - 1)];
+                            console.log(randomNum + '_' +randomHunter)
+                        } else if (randomNum === 3) {
+                            randomHunter = eliteHunters.getChildren()[Phaser.Math.Between(0, eliteHunters.getLength() - 1)];
+                            if (undefined === randomHunter || randomHunter === null) {
+                                randomHunter = hunters.getChildren()[Phaser.Math.Between(0, hunters.getLength() - 1)];
+                            }
+                            console.log(randomNum + '_' +randomHunter)
+                        }
+                        var hackX = randomHunter.x;
+                        var hackY = randomHunter.y;
+                        var hack = this.physics.add.sprite(hackX,hackY,'hack').setScale(2.5,2.5);
+                        hack.anims.play('hackAnims')
+                        randomHunter.disableBody(true,true)
+                        hunters.remove(randomHunter,true)
+                        eliteHunters.remove(randomHunter,true)
+                        arms.setVisible(false)
+                        this.time.delayedCall(800, () => {
+                            hack.disableBody(true,true)
+                            arms.setVisible(true)
+                        })
+                    }
+                },
+                loop: true
+            })
+        })
+    }
 }
